@@ -1,7 +1,12 @@
-find_package(GTest CONFIG REQUIRED)
+if(EXISTS /usr/src/googletest/CMakeLists.txt)
+        add_subdirectory(/usr/src/googletest googletest-build)
+else()
+        message(FATAL_ERROR "GoogleTest sources were not found. Install the googletest package or provide a project-local GoogleTest source.")
+endif()
 
 add_executable(cryptography_tests
         bits_tests.cpp
+        padding_tests.cpp
 )
 
 target_compile_features(cryptography_tests
