@@ -17,5 +17,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
+include(CTest)
+
 add_subdirectory(src)
 add_subdirectory(apps)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
