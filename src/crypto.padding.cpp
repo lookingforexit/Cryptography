@@ -4,13 +4,38 @@ import std;
 
 namespace crypto {
     namespace {
+        void ValidateBlockSize(
+            std::size_t block_size,
+            std::string_view padding_name,
+            bool require_byte_sized_block_size
+        ) {
+            if (block_size == 0 || (require_byte_sized_block_size && block_size > 255)) {
+                throw std::invalid_argument(
+                    std::format("block size for {} padding is invalid", padding_name)
+                );
+            }
+        }
+
+        void ValidatePaddedData(
+            std::span<const std::byte> data,
+            std::size_t block_size,
+            std::string_view padding_name,
+            bool require_byte_sized_block_size
+        ) {
+            ValidateBlockSize(block_size, padding_name, require_byte_sized_block_size);
+
+            if (data.empty() || data.size() % block_size != 0) {
+                throw std::invalid_argument(
+                    std::format("data size for {} padding is invalid", padding_name)
+                );
+            }
+        }
+
         std::vector<std::byte> AddZerosPadding(
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0) {
-                throw std::invalid_argument("block size for zeros padding cannot be zero");
-            }
+            ValidateBlockSize(block_size, "zeros", false);
 
             std::vector padded(data.begin(), data.end());
 
@@ -34,9 +59,7 @@ namespace crypto {
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0 || block_size > 255) {
-                throw std::invalid_argument("block size for ansix923 padding is invalid");
-            }
+            ValidateBlockSize(block_size, "ansix923", true);
 
             std::vector padded(data.begin(), data.end());
 
@@ -51,9 +74,7 @@ namespace crypto {
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0 || block_size > 255) {
-                throw std::invalid_argument("block size for pkcs7 padding is invalid");
-            }
+            ValidateBlockSize(block_size, "pkcs7", true);
 
             std::vector padded(data.begin(), data.end());
 
@@ -67,9 +88,7 @@ namespace crypto {
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0 || block_size > 255) {
-                throw std::invalid_argument("block size for iso10126 padding is invalid");
-            }
+            ValidateBlockSize(block_size, "iso10126", true);
 
             std::vector padded(data.begin(), data.end());
 
@@ -92,9 +111,7 @@ namespace crypto {
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0) {
-                throw std::invalid_argument("block size for zeros padding is zero");
-            }
+            ValidatePaddedData(data, block_size, "zeros", false);
 
             std::vector unpadded(data.begin(), data.end());
             while (!unpadded.empty() && unpadded.back() == std::byte{0}) {
@@ -120,12 +137,7 @@ namespace crypto {
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0 || block_size > 255) {
-                throw std::invalid_argument("block size for ansix923 padding is invalid");
-            }
-            if (data.empty() || data.size() % block_size != 0) {
-                throw std::invalid_argument("data size for ansix923 padding is invalid");
-            }
+            ValidatePaddedData(data, block_size, "ansix923", true);
 
             const auto padding_size = GetPaddingSize(data, block_size);
             const auto padding_begin = data.end() - padding_size;
@@ -140,8 +152,7 @@ namespace crypto {
                 throw std::invalid_argument("invalid ansix923 padding");
             }
 
-            std::vector unpadded(data.begin(), data.end());
-            unpadded.resize(unpadded.size() - padding_size);
+            std::vector unpadded(data.begin(), data.end() - padding_size);
 
             return unpadded;
         }
@@ -150,12 +161,7 @@ namespace crypto {
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0 || block_size > 255) {
-                throw std::invalid_argument("block size for pkcs7 padding is invalid");
-            }
-            if (data.empty() || data.size() % block_size != 0) {
-                throw std::invalid_argument("data size for pkcs7 padding is invalid");
-            }
+            ValidatePaddedData(data, block_size, "pkcs7", true);
 
             const auto padding_size = GetPaddingSize(data, block_size);
             const auto padding_begin = data.end() - padding_size;
@@ -170,8 +176,7 @@ namespace crypto {
                 throw std::invalid_argument("invalid pkcs7 padding");
             }
 
-            std::vector unpadded(data.begin(), data.end());
-            unpadded.resize(unpadded.size() - padding_size);
+            std::vector unpadded(data.begin(), data.end() - padding_size);
 
             return unpadded;
         }
@@ -180,17 +185,11 @@ namespace crypto {
             std::span<const std::byte> data,
             std::size_t block_size
         ) {
-            if (block_size == 0 || block_size > 255) {
-                throw std::invalid_argument("block size for iso10126 padding is invalid");
-            }
-            if (data.empty() || data.size() % block_size != 0) {
-                throw std::invalid_argument("data size for iso10126 padding is invalid");
-            }
+            ValidatePaddedData(data, block_size, "iso10126", true);
 
             const auto padding_size = GetPaddingSize(data, block_size);
 
-            std::vector unpadded(data.begin(), data.end());
-            unpadded.resize(unpadded.size() - padding_size);
+            std::vector unpadded(data.begin(), data.end() - padding_size);
 
             return unpadded;
         }
