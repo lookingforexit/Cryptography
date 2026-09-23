@@ -42,6 +42,24 @@ TEST(Padding, RemovesZerosPaddingFromEnd) {
     EXPECT_EQ(result, Bytes({0xAA, 0xBB}));
 }
 
+TEST(Padding, ThrowsOnZeroBlockSizeForZerosPadding) {
+    const auto input = Bytes({0xAA});
+
+    EXPECT_THROW(
+        static_cast<void>(crypto::AddPadding(input, 0, crypto::PaddingMode::Zeros)),
+        std::invalid_argument
+    );
+}
+
+TEST(Padding, ThrowsWhenZerosPaddedDataSizeIsNotBlockAligned) {
+    const auto input = Bytes({0xAA, 0xBB, 0x00});
+
+    EXPECT_THROW(
+        static_cast<void>(crypto::RemovePadding(input, 4, crypto::PaddingMode::Zeros)),
+        std::invalid_argument
+    );
+}
+
 TEST(Padding, AddsPkcs7Padding) {
     const auto input = Bytes({0xAA, 0xBB, 0xCC, 0xDD, 0xEE});
 
