@@ -14,6 +14,14 @@ target_sources(cryptography_lib
         PUBLIC
             FILE_SET CXX_MODULES FILES
                 crypto.bits.cppm
+                crypto.cipher.cppm
+                crypto.modes.cppm
+                crypto.padding.cppm
+                crypto.context.cppm
         PRIVATE
             crypto.bits.cpp
+            crypto.cipher.cpp
+            crypto.modes.cpp
+            crypto.padding.cpp
+            crypto.context.cpp
 )
