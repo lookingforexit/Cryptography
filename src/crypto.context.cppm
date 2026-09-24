@@ -14,7 +14,7 @@ export namespace crypto {
             CipherMode cipher_mode,
             PaddingMode padding_mode,
             std::span<const std::byte> iv = {},
-            std::vector<std::vector<std::byte>> extra_parameters = {}
+            const std::vector<std::vector<std::byte>>& extra_parameters = {}
         );
 
         ~SymmetricCipherContext();
@@ -31,15 +31,15 @@ export namespace crypto {
             std::vector<std::byte>& result
         ) const;
         [[nodiscard]]
-        std::future<void> EncryptFileAsync(
-            const std::filesystem::path& input_path,
-            const std::filesystem::path& output_path
-        ) const;
-
-        [[nodiscard]]
         std::future<void> DecryptAsync(
             std::span<const std::byte> input,
             std::vector<std::byte>& result
+        ) const;
+
+        [[nodiscard]]
+        std::future<void> EncryptFileAsync(
+            const std::filesystem::path& input_path,
+            const std::filesystem::path& output_path
         ) const;
         [[nodiscard]]
         std::future<void> DecryptFileAsync(
