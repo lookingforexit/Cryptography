@@ -54,6 +54,17 @@ std::unique_ptr<crypto::SymmetricCipher> MakeCipher() {
     return std::make_unique<XorCipher>();
 }
 
+std::vector<std::byte> GenerateLargeInput(std::size_t size) {
+    std::vector<std::byte> input;
+    input.reserve(size);
+
+    for (std::size_t i = 0; i < size; ++i) {
+        input.push_back(static_cast<std::byte>((i * 29 + 11) & 0xFF));
+    }
+
+    return input;
+}
+
 }
 
 TEST(Context, EncryptAsyncAndDecryptAsyncRoundTrip) {
@@ -123,3 +134,24 @@ TEST(Context, EncryptFileAsyncAndDecryptFileAsyncRoundTrip) {
     std::filesystem::remove(decrypted_path);
 }
 
+TEST(Context, EncryptAsyncAndDecryptAsyncLargeInputRoundTrip) {
+    const auto key = Bytes({0x01, 0x02, 0x03, 0x04});
+    const auto iv = Bytes({0x10, 0x20, 0x30, 0x40});
+    const auto input = GenerateLargeInput(64 * 1024 + 3);
+
+    crypto::SymmetricCipherContext context(
+        MakeCipher(),
+        key,
+        crypto::CipherMode::CTR,
+        crypto::PaddingMode::PKCS7,
+        iv
+    );
+
+    std::vector<std::byte> encrypted;
+    context.EncryptAsync(input, encrypted).get();
+
+    std::vector<std::byte> decrypted;
+    context.DecryptAsync(encrypted, decrypted).get();
+
+    EXPECT_EQ(decrypted, input);
+}

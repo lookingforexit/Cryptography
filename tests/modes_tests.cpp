@@ -114,6 +114,32 @@ void ExpectEncryptOnlyRoundTrip(
     EXPECT_EQ(decrypted, input);
 }
 
+std::vector<std::byte> GenerateLargeInput(std::size_t size) {
+    std::vector<std::byte> input;
+    input.reserve(size);
+
+    for (std::size_t i = 0; i < size; ++i) {
+        input.push_back(static_cast<std::byte>((i * 31 + 17) & 0xFF));
+    }
+
+    return input;
+}
+
+void ExpectLargeRoundTrip(
+    crypto::CipherMode cipher_mode,
+    std::span<const std::byte> iv = {}
+) {
+    XorCipher cipher;
+    const auto input = GenerateLargeInput(16 * 1024 + 3);
+
+    auto mode = crypto::MakeCipherModeStrategy(cipher_mode, iv);
+
+    const auto encrypted = mode->Encrypt(cipher, input, crypto::PaddingMode::PKCS7);
+    const auto decrypted = mode->Decrypt(cipher, encrypted, crypto::PaddingMode::PKCS7);
+
+    EXPECT_EQ(decrypted, input);
+}
+
 }
 
 TEST(Modes, EcbDecryptsEncryptedData) {
@@ -257,4 +283,26 @@ TEST(Modes, CbcDoesNotProduceEqualBlocksForEqualPlainBlocks) {
 
     ASSERT_GE(encrypted.size(), 8);
     EXPECT_FALSE(std::equal(encrypted.begin(), encrypted.begin() + 4, encrypted.begin() + 4));
+}
+
+TEST(Modes, EcbLargeInputRoundTripPreservesBlockOrder) {
+    ExpectLargeRoundTrip(crypto::CipherMode::ECB);
+}
+
+TEST(Modes, CbcLargeInputRoundTripPreservesBlockOrder) {
+    const auto iv = Iv();
+
+    ExpectLargeRoundTrip(crypto::CipherMode::CBC, iv);
+}
+
+TEST(Modes, CtrLargeInputRoundTripPreservesBlockOrder) {
+    const auto iv = Iv();
+
+    ExpectLargeRoundTrip(crypto::CipherMode::CTR, iv);
+}
+
+TEST(Modes, RandomDeltaLargeInputRoundTripPreservesBlockOrder) {
+    const auto iv = RandomDeltaIv();
+
+    ExpectLargeRoundTrip(crypto::CipherMode::RandomDelta, iv);
 }
