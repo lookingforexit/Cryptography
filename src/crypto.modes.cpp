@@ -1,5 +1,7 @@
 module crypto.modes;
 
+import std;
+
 namespace crypto {
     namespace {
         void ValidateBlockSize(std::size_t block_size) {
@@ -49,6 +51,129 @@ namespace crypto {
             vector.insert(vector.end(), block.begin(), block.end());
         }
 
+        std::vector<std::byte> MakeCounterBlock(std::span<const std::byte> iv, std::uint64_t counter) {
+            std::vector counter_block(iv.begin(), iv.end());
+
+            for (std::size_t i = counter_block.size(); i > 0 && counter != 0; --i) {
+                const auto index = i - 1;
+
+                const auto sum =
+                    static_cast<unsigned>(counter_block[index]) +
+                    static_cast<unsigned>(counter & 0xFF);
+
+                counter_block[index] = static_cast<std::byte>(sum & 0xFF);
+                counter = (counter >> 8) + (sum >> 8);
+            }
+
+            return counter_block;
+        }
+
+        std::vector<std::byte> MakeRandomDeltaState(
+            std::span<const std::byte> iv,
+            std::span<const std::byte> delta,
+            std::size_t block_index
+        ) {
+            std::vector state(iv.begin(), iv.end());
+
+            for (std::size_t delta_pos = 0; delta_pos < delta.size(); ++delta_pos) {
+                const auto delta_index = delta.size() - delta_pos - 1;
+
+                auto multiplier = block_index;
+                auto carry = std::uint64_t{0};
+
+                for (
+                    std::size_t multiplier_pos = 0;
+                    multiplier != 0 || carry != 0;
+                    ++multiplier_pos
+                ) {
+                    const auto state_pos = delta_pos + multiplier_pos;
+
+                    if (state_pos >= state.size()) {
+                        break;
+                    }
+
+                    const auto state_index = state.size() - state_pos - 1;
+
+                    const auto product = static_cast<std::uint64_t>(delta[delta_index]) * (multiplier & 0xFFU) +
+                        static_cast<std::uint64_t>(state[state_index]) + carry;
+
+                    state[state_index] = static_cast<std::byte>(product & 0xFFU);
+
+                    carry = product >> 8;
+                    multiplier >>= 8;
+                }
+            }
+
+            return state;
+        }
+
+
+        template<typename Func>
+        std::vector<std::byte> ProcessBlocksParallel(
+            std::span<const std::byte> data,
+            std::size_t block_size,
+            std::string_view mode_name,
+            Func process_block
+        ) {
+            ValidateBlockAlignedData(data, block_size, mode_name);
+
+            const auto blocks_count = data.size() / block_size;
+
+            std::vector<std::byte> result(data.size());
+
+            const auto all_threads = std::thread::hardware_concurrency();
+            const auto threads_count = std::min<std::size_t>(blocks_count, all_threads);
+
+            if (threads_count < 2 || blocks_count < 2) {
+                for (std::size_t block_i = 0; block_i < blocks_count; ++block_i) {
+                    const auto offset = block_i * block_size;
+                    const auto block = std::span{data.data() + offset, block_size};
+                    const auto result_block = process_block(block, block_i);
+                    ValidateOutputBlockSize(result_block, block_size, mode_name);
+                    std::ranges::copy(result_block, result.begin() + static_cast<std::ptrdiff_t>(offset));
+                }
+
+                return result;
+            }
+
+            std::vector<std::thread> threads;
+            threads.reserve(threads_count);
+            std::vector<std::exception_ptr> exceptions(threads_count);
+
+            const auto blocks_per_thread = (blocks_count + threads_count - 1) / threads_count;
+
+            for (std::size_t thread_i = 0; thread_i < threads_count; ++thread_i) {
+                const auto first_block = thread_i * blocks_per_thread;
+                const auto last_block = std::min(blocks_count, first_block + blocks_per_thread);
+
+                threads.emplace_back([&, thread_i, first_block, last_block]() {
+                    try {
+                        for (std::size_t block_i = first_block; block_i < last_block; ++block_i) {
+                            const auto offset = block_i * block_size;
+                            const auto block = std::span{data.data() + offset, block_size};
+                            const auto result_block = process_block(block, block_i);
+                            ValidateOutputBlockSize(result_block, block_size, mode_name);
+                            std::ranges::copy(result_block, result.begin() + static_cast<std::ptrdiff_t>(offset));
+                        }
+                    } catch (...) {
+                        exceptions[thread_i] = std::current_exception();
+                    }
+                });
+            }
+
+            for (auto& thread : threads) {
+                thread.join();
+            }
+
+            for (const auto& exception : exceptions) {
+                if (exception) {
+                    std::rethrow_exception(exception);
+                }
+            }
+
+            return result;
+        }
+
         class ECBMode final : public CipherModeStrategy {
         public:
             ~ECBMode() override = default;
@@ -64,17 +189,14 @@ namespace crypto {
 
                 const auto padded = AddPadding(data, block_size, padding_mode);
 
-                std::vector<std::byte> result;
-                result.reserve(padded.size());
-
-                for (std::size_t offset = 0; offset < padded.size(); offset += block_size) {
-                    const auto block = std::span{padded.data() + offset, block_size};
-                    const auto encrypted = cipher.EncryptBlock(block);
-                    ValidateOutputBlockSize(encrypted, block_size, "ecb");
-                    AppendBlock(result, encrypted);
-                }
-
-                return result;
+                return ProcessBlocksParallel(
+                    padded,
+                    block_size,
+                    "ecb",
+                    [&](std::span<const std::byte> block, std::size_t index) {
+                        return cipher.EncryptBlock(block);
+                    }
+                );
             }
 
             [[nodiscard]]
@@ -86,17 +208,16 @@ namespace crypto {
                 const auto block_size = cipher.BlockSize();
                 ValidateBlockAlignedData(data, block_size, "ecb");
 
-                std::vector<std::byte> result;
-                result.reserve(data.size());
+                const auto decrypted = ProcessBlocksParallel(
+                    data,
+                    block_size,
+                    "ecb",
+                    [&](std::span<const std::byte> block, std::size_t index) {
+                        return cipher.DecryptBlock(block);
+                    }
+                );
 
-                for (std::size_t offset = 0; offset < data.size(); offset += block_size) {
-                    const auto cipher_block = std::span{data.data() + offset, block_size};
-                    const auto decrypted = cipher.DecryptBlock(cipher_block);
-                    ValidateOutputBlockSize(decrypted, block_size, "ecb");
-                    AppendBlock(result, decrypted);
-                }
-
-                return RemovePadding(result, block_size, padding_mode);
+                return RemovePadding(decrypted, block_size, padding_mode);
             }
         };
 
@@ -145,18 +266,24 @@ namespace crypto {
                 ValidateBlockAlignedData(data, block_size, "cbc");
                 ValidateIVSize(iv_, block_size, "cbc");
 
+                const auto decrypted_blocks = ProcessBlocksParallel(
+                    data,
+                    block_size,
+                    "cbc",
+                    [&](std::span<const std::byte> block, std::size_t index) {
+                        return cipher.DecryptBlock(block);
+                    }
+                );
+
                 std::vector<std::byte> result;
                 result.reserve(data.size());
 
-                auto prev_cipher_block = iv_;
-
                 for (std::size_t offset = 0; offset < data.size(); offset += block_size) {
-                    const auto cipher_block = std::span{data.data() + offset, block_size};
-                    const auto decrypted = cipher.DecryptBlock(cipher_block);
-                    const auto block = XORBlocks(decrypted, prev_cipher_block);
+                    const auto decrypted_block = std::span{decrypted_blocks.data() + offset, block_size};
+                    const auto previous_cipher_block = offset == 0 ? std::span{iv_} :
+                        std::span{data.data() + offset - block_size, block_size};
+                    const auto block = XORBlocks(decrypted_block, previous_cipher_block);
                     AppendBlock(result, block);
-
-                    prev_cipher_block.assign(cipher_block.begin(), cipher_block.end());
                 }
 
                 return RemovePadding(result, block_size, padding_mode);
@@ -370,33 +497,18 @@ namespace crypto {
                 ValidateBlockAlignedData(data, block_size, "ctr");
                 ValidateIVSize(iv_, block_size, "ctr");
 
-                std::vector<std::byte> result;
-                result.reserve(data.size());
+                return ProcessBlocksParallel(
+                    data,
+                    block_size,
+                    "ctr",
+                    [&](std::span<const std::byte> block, std::size_t index) {
+                        const auto counter_block = MakeCounterBlock(iv_, index);
+                        const auto gamma = cipher.EncryptBlock(counter_block);
+                        ValidateOutputBlockSize(gamma, block_size, "ctr");
 
-                std::uint64_t counter = 0;
-
-                for (std::size_t offset = 0; offset < data.size(); offset += block_size, ++counter) {
-                    std::vector counter_block(iv_.begin(), iv_.end());
-
-                    for (std::size_t i = counter_block.size(), value = counter; i > 0 && value != 0; --i) {
-                        const auto index = i - 1;
-
-                        const auto sum =
-                            static_cast<unsigned>(counter_block[index]) +
-                            static_cast<unsigned>(value & 0xFF);
-
-                        counter_block[index] = static_cast<std::byte>(sum & 0xFF);
-                        value = (value >> 8) + (sum >> 8);
+                        return XORBlocks(block, gamma);
                     }
-
-                    const auto block = std::span{data.data() + offset, block_size};
-                    const auto gamma = cipher.EncryptBlock(counter_block);
-
-                    ValidateOutputBlockSize(gamma, block_size, "ctr");
-                    AppendBlock(result, XORBlocks(block, gamma));
-                }
-
-                return result;
+                );
             }
 
         public:
@@ -446,47 +558,23 @@ namespace crypto {
                     throw std::invalid_argument("random delta requires even block size");
                 }
 
-                std::vector<std::byte> result;
-                result.reserve(data.size());
-
-                std::vector state(iv_.begin(), iv_.end());
                 const std::vector delta(
                     iv_.begin() + static_cast<std::ptrdiff_t>(block_size >> 1),
                     iv_.end()
                 );
 
-                for (std::size_t offset = 0; offset < data.size(); offset += block_size) {
-                    const auto block = std::span{data.data() + offset, block_size};
-                    const auto gamma = cipher.EncryptBlock(state);
+                return ProcessBlocksParallel(
+                    data,
+                    block_size,
+                    "random delta",
+                    [&](std::span<const std::byte> block, std::size_t block_index) {
+                        const auto state = MakeRandomDeltaState(iv_, delta, block_index);
+                        const auto gamma = cipher.EncryptBlock(state);
+                        ValidateOutputBlockSize(gamma, block_size, "random delta");
 
-                    ValidateOutputBlockSize(gamma, block_size, "random delta");
-                    AppendBlock(result, XORBlocks(block, gamma));
-
-                    unsigned carry = 0;
-
-                    for (std::size_t i = delta.size(); i > 0; --i) {
-                        const auto state_index = state.size() - (delta.size() - i) - 1;
-                        const auto delta_index = i - 1;
-
-                        const auto sum =
-                            static_cast<unsigned>(state[state_index]) +
-                            static_cast<unsigned>(delta[delta_index]) +
-                            carry;
-
-                        state[state_index] = static_cast<std::byte>(sum & 0xFF);
-                        carry = sum >> 8;
-                    }
-
-                    for (std::size_t i = state.size() - delta.size(); i > 0 && carry != 0; --i) {
-                        const auto index = i - 1;
-                        const auto sum = static_cast<unsigned>(state[index]) + carry;
-
-                        state[index] = static_cast<std::byte>(sum & 0xFF);
-                        carry = sum >> 8;
-                    }
-                }
-
-                return result;
+                        return XORBlocks(block, gamma);
+                  }
+              );
             }
 
         public:
