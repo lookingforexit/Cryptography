@@ -7,6 +7,7 @@ endif()
 add_executable(cryptography_tests
         bits_tests.cpp
         context_tests.cpp
+        feistel_tests.cpp
         modes_tests.cpp
         padding_tests.cpp
 )
