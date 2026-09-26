@@ -18,10 +18,12 @@ target_sources(cryptography_lib
                 crypto.modes.cppm
                 crypto.padding.cppm
                 crypto.context.cppm
+                crypto.feistel.cppm
         PRIVATE
             crypto.bits.cpp
             crypto.cipher.cpp
             crypto.modes.cpp
             crypto.padding.cpp
             crypto.context.cpp
+            crypto.feistel.cpp
 )
