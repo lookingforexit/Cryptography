@@ -34,9 +34,11 @@ namespace crypto {
 
         ~SymmetricCipherContextImpl() = default;
 
+        [[nodiscard]]
         std::vector<std::byte> Encrypt(std::span<const std::byte> input) const {
             return cipher_mode_strategy_->Encrypt(*cipher_, input, padding_mode_);
         }
+        [[nodiscard]]
         std::vector<std::byte> Decrypt(std::span<const std::byte> input) const {
             return cipher_mode_strategy_->Decrypt(*cipher_, input, padding_mode_);
         }
@@ -114,7 +116,7 @@ namespace crypto {
             ifs.seekg(0);
             ifs.read(
                 reinterpret_cast<char*>(data.data()),
-                data.size()
+                static_cast<std::streamsize>(data.size())
             );
 
             if (!ifs) {
@@ -131,7 +133,7 @@ namespace crypto {
                 throw std::runtime_error("unable to open output file");
             }
 
-            ofs.write(reinterpret_cast<const char*>(data.data()), data.size());
+            ofs.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
 
             if (!ofs) {
                 throw std::runtime_error("unable to write to output file");
