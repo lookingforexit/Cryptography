@@ -60,6 +60,7 @@ namespace crypto {
             ValidateBlockSize(block_size_);
         }
 
+        [[nodiscard]]
         std::vector<std::byte> EncryptBlock(std::span<const std::byte> block) const {
             ValidateRoundKeys();
             ValidateBlock(block, block_size_);
@@ -67,6 +68,7 @@ namespace crypto {
             return Transform(block ,false);
         }
 
+        [[nodiscard]]
         std::vector<std::byte> DecryptBlock(std::span<const std::byte> block) const {
             ValidateRoundKeys();
             ValidateBlock(block, block_size_);
@@ -79,6 +81,7 @@ namespace crypto {
             ValidateRoundKeys();
         }
 
+        [[nodiscard]]
         std::size_t BlockSize() const {
             return block_size_;
         }
@@ -95,10 +98,10 @@ namespace crypto {
             const auto half_size = block_size_ >> 1;
 
             std::vector<std::byte> left;
-            left.assign(block.begin(), block.begin() + half_size);
+            left.assign(block.begin(), block.begin() + static_cast<std::ptrdiff_t>(half_size));
 
             std::vector<std::byte> right;
-            right.assign(block.begin() + half_size, block.end());
+            right.assign(block.begin() + static_cast<std::ptrdiff_t>(half_size), block.end());
 
             for (std::size_t round = 0; round < round_keys_.size(); ++round) {
                 const auto key_index = is_decrypt ? round_keys_.size() - 1 - round : round;

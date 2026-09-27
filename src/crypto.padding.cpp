@@ -140,7 +140,7 @@ namespace crypto {
             ValidatePaddedData(data, block_size, "ansix923", true);
 
             const auto padding_size = GetPaddingSize(data, block_size);
-            const auto padding_begin = data.end() - padding_size;
+            const auto padding_begin = data.end() - static_cast<std::ptrdiff_t>(padding_size);
 
             const bool is_valid = std::all_of(
                 padding_begin,
@@ -152,7 +152,7 @@ namespace crypto {
                 throw std::invalid_argument("invalid ansix923 padding");
             }
 
-            std::vector unpadded(data.begin(), data.end() - padding_size);
+            std::vector unpadded(data.begin(), data.end() - static_cast<std::ptrdiff_t>(padding_size));
 
             return unpadded;
         }
@@ -164,7 +164,7 @@ namespace crypto {
             ValidatePaddedData(data, block_size, "pkcs7", true);
 
             const auto padding_size = GetPaddingSize(data, block_size);
-            const auto padding_begin = data.end() - padding_size;
+            const auto padding_begin = data.end() - static_cast<std::ptrdiff_t>(padding_size);
 
             const bool is_valid = std::all_of(
                 padding_begin,
@@ -176,7 +176,7 @@ namespace crypto {
                 throw std::invalid_argument("invalid pkcs7 padding");
             }
 
-            std::vector unpadded(data.begin(), data.end() - padding_size);
+            std::vector unpadded(data.begin(), data.end() - static_cast<std::ptrdiff_t>(padding_size));
 
             return unpadded;
         }
@@ -189,7 +189,7 @@ namespace crypto {
 
             const auto padding_size = GetPaddingSize(data, block_size);
 
-            std::vector unpadded(data.begin(), data.end() - padding_size);
+            std::vector unpadded(data.begin(), data.end() - static_cast<std::ptrdiff_t>(padding_size));
 
             return unpadded;
         }
