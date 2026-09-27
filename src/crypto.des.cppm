@@ -17,9 +17,12 @@ export namespace crypto {
         DES(DES&& rhs) noexcept;
         DES& operator=(DES&& rhs) noexcept;
 
+        [[nodiscard]]
         std::vector<std::byte> EncryptBlock(std::span<const std::byte> block) const override;
+        [[nodiscard]]
         std::vector<std::byte> DecryptBlock(std::span<const std::byte> block) const override;
         void SetKey(std::span<const std::byte> key) override;
+        [[nodiscard]]
         std::size_t BlockSize() const override;
 
     private:
