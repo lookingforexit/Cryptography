@@ -123,6 +123,8 @@ namespace crypto {
                 throw std::runtime_error("unable to read input file");
             }
 
+            ifs.close();
+
             return data;
         }
 
@@ -138,6 +140,8 @@ namespace crypto {
             if (!ofs) {
                 throw std::runtime_error("unable to write to output file");
             }
+
+            ofs.close();
         }
     }
 
