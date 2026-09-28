@@ -3,6 +3,7 @@ import crypto.context;
 import crypto.padding;
 import crypto.modes;
 import crypto.des;
+import crypto.deal;
 
 
 namespace {
@@ -94,12 +95,87 @@ namespace {
 
         output_file.close();
     }
+
+    void DEALDemo(
+        crypto::PaddingMode padding_mode,
+        crypto::CipherMode cipher_mode,
+        std::span<const std::byte> key,
+        std::span<const std::byte> iv,
+        std::span<const std::byte> input
+    ) {
+        const crypto::SymmetricCipherContext context(
+            std::make_unique<crypto::DEAL>(),
+            key,
+            cipher_mode,
+            padding_mode,
+            iv
+        );
+
+        std::vector<std::byte> encrypted;
+        context.EncryptAsync(input, encrypted).get();
+
+        std::vector<std::byte> decrypted;
+        context.DecryptAsync(encrypted, decrypted).get();
+
+        if (!std::ranges::equal(input, decrypted)) {
+            throw std::runtime_error("input != D(E(input))");
+        }
+    }
+
+    void DEALDemo(
+        crypto::PaddingMode padding_mode,
+        crypto::CipherMode cipher_mode,
+        std::span<const std::byte> key,
+        std::span<const std::byte> iv,
+        const std::filesystem::path& input_path,
+        const std::filesystem::path& output_path
+    ) {
+        const crypto::SymmetricCipherContext context(
+            std::make_unique<crypto::DEAL>(),
+            key,
+            cipher_mode,
+            padding_mode,
+            iv
+        );
+
+        std::ifstream input_file(input_path, std::ios::binary | std::ios::ate);
+        if (!input_file.is_open()) {
+            throw std::runtime_error("failed to open input file");
+        }
+        const std::streamsize input_file_size = input_file.tellg();
+        input_file.seekg(0, std::ios::beg);
+        std::vector<char> buffer_start(input_file_size);
+        if (!input_file.read(buffer_start.data(), input_file_size)) {
+            throw std::runtime_error("failed to read input file");
+        }
+        input_file.close();
+
+        context.EncryptFileAsync(input_path, output_path).get();
+        context.DecryptFileAsync(output_path, input_path).get();
+
+        std::ifstream output_file(input_path, std::ios::binary | std::ios::ate);
+        if (!output_file.is_open()) {
+            throw std::runtime_error("failed to open output file");
+        }
+        const std::streamsize output_file_size = output_file.tellg();
+        output_file.seekg(0, std::ios::beg);
+        std::vector<char> buffer_end(output_file_size);
+        if (!output_file.read(buffer_end.data(), output_file_size)) {
+            throw std::runtime_error("failed to read output file");
+        }
+
+        if (buffer_end != buffer_start) {
+            throw std::runtime_error("file != D(E(file))");
+        }
+
+        output_file.close();
+    }
 }
 
 int main() {
     // DES demonstration
-    std::vector<std::byte> key = GenerateRandomBytes(8);
-    std::vector<std::byte> iv = GenerateRandomBytes(8);
+    std::vector<std::byte> key8 = GenerateRandomBytes(8);
+    std::vector<std::byte> iv8 = GenerateRandomBytes(8);
     std::vector<std::byte> input = GenerateRandomBytes(5251);
     input.push_back(std::byte{1});
 
@@ -119,34 +195,62 @@ int main() {
     };
 
     for (const auto& padding_mode : padding_modes) {
-        DESDemo(padding_mode, crypto::CipherMode::ECB, key, {}, input);
+        DESDemo(padding_mode, crypto::CipherMode::ECB, key8, {}, input);
     }
     for (const auto& padding_mode : padding_modes) {
         for (const auto& cipher_mode : cipher_modes) {
-            DESDemo(padding_mode, cipher_mode, key, iv, input);
+            DESDemo(padding_mode, cipher_mode, key8, iv8, input);
         }
     }
 
     const std::filesystem::path temp_file("assets/temp.txt");
     const std::filesystem::path file1("assets/text.txt");
-    const std::filesystem::path file2("assets/song.mp3");
-    const std::filesystem::path file3("assets/homyak.jpeg");
+    //const std::filesystem::path file2("assets/song.mp3");
+    //const std::filesystem::path file3("assets/homyak.jpeg");
 
     for (const auto& padding_mode : padding_modes) {
-        DESDemo(padding_mode, crypto::CipherMode::ECB, key, {}, file1, temp_file);
-        //DESDemo(padding_mode, crypto::CipherMode::ECB, key, {}, file2, temp_file);
-        //DESDemo(padding_mode, crypto::CipherMode::ECB, key, {}, file3, temp_file);
+        DESDemo(padding_mode, crypto::CipherMode::ECB, key8, {}, file1, temp_file);
+        //DESDemo(padding_mode, crypto::CipherMode::ECB, key8, {}, file2, temp_file);
+        //DESDemo(padding_mode, crypto::CipherMode::ECB, key8, {}, file3, temp_file);
     }
     for (const auto& padding_mode : padding_modes) {
         for (const auto& cipher_mode : cipher_modes) {
-            DESDemo(padding_mode, cipher_mode, key, iv, file1, temp_file);
-            //DESDemo(padding_mode, cipher_mode, key, iv, file2, temp_file);
-            //DESDemo(padding_mode, cipher_mode, key, iv, file3, temp_file);
+            DESDemo(padding_mode, cipher_mode, key8, iv8, file1, temp_file);
+            //DESDemo(padding_mode, cipher_mode, key8, iv8, file2, temp_file);
+            //DESDemo(padding_mode, cipher_mode, key8, iv8, file3, temp_file);
         }
     }
 
     std::cout << "DES demonstration finished" << std::endl;
 
+
+    // DEAL demonstration
+    std::vector<std::byte> key16 = GenerateRandomBytes(16);
+    std::vector<std::byte> iv16 = GenerateRandomBytes(16);
+
+    for (const auto& padding_mode : padding_modes) {
+        DEALDemo(padding_mode, crypto::CipherMode::ECB, key16, {}, input);
+    }
+    for (const auto& padding_mode : padding_modes) {
+        for (const auto& cipher_mode : cipher_modes) {
+            DEALDemo(padding_mode, cipher_mode, key16, iv16, input);
+        }
+    }
+
+    for (const auto& padding_mode : padding_modes) {
+        DEALDemo(padding_mode, crypto::CipherMode::ECB, key16, {}, file1, temp_file);
+        //DEALDemo(padding_mode, crypto::CipherMode::ECB, key16, {}, file2, temp_file);
+        //DEALDemo(padding_mode, crypto::CipherMode::ECB, key16, {}, file3, temp_file);
+    }
+    for (const auto& padding_mode : padding_modes) {
+        for (const auto& cipher_mode : cipher_modes) {
+            DEALDemo(padding_mode, cipher_mode, key16, iv16, file1, temp_file);
+            //DEALDemo(padding_mode, cipher_mode, key16, iv16, file2, temp_file);
+            //DEALDemo(padding_mode, cipher_mode, key16, iv16, file3, temp_file);
+        }
+    }
+
+    std::cout << "DEAL demonstration finished" << std::endl;
 
     return 0;
 }
