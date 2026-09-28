@@ -20,6 +20,7 @@ target_sources(cryptography_lib
                 crypto.context.cppm
                 crypto.feistel.cppm
                 crypto.des.cppm
+                crypto.deal.cppm
         PRIVATE
             crypto.bits.cpp
             crypto.modes.cpp
@@ -27,4 +28,5 @@ target_sources(cryptography_lib
             crypto.context.cpp
             crypto.feistel.cpp
             crypto.des.cpp
+            crypto.deal.cpp
 )
