@@ -303,7 +303,6 @@ namespace crypto {
     DES::DES() : des_impl_(std::make_unique<DESImpl>()) {}
 
     DES::DES(DES&& rhs) noexcept = default;
-
     DES& DES::operator=(DES&& rhs) noexcept = default;
 
     std::vector<std::byte> DES::EncryptBlock(std::span<const std::byte> block) const {
