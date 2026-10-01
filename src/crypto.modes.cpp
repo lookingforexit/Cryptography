@@ -57,9 +57,8 @@ namespace crypto {
             for (std::size_t i = counter_block.size(); i > 0 && counter != 0; --i) {
                 const auto index = i - 1;
 
-                const auto sum =
-                    static_cast<unsigned>(counter_block[index]) +
-                    static_cast<unsigned>(counter & 0xFF);
+                const auto sum = static_cast<std::uint8_t>(counter_block[index]) +
+                    static_cast<std::uint8_t>(counter & 0xFF);
 
                 counter_block[index] = static_cast<std::byte>(sum & 0xFF);
                 counter = (counter >> 8) + (sum >> 8);
@@ -81,23 +80,17 @@ namespace crypto {
                 auto multiplier = block_index;
                 auto carry = std::uint64_t{0};
 
-                for (
-                    std::size_t multiplier_pos = 0;
-                    multiplier != 0 || carry != 0;
-                    ++multiplier_pos
-                ) {
+                for (std::size_t multiplier_pos = 0; multiplier != 0 || carry != 0; ++multiplier_pos) {
                     const auto state_pos = delta_pos + multiplier_pos;
-
                     if (state_pos >= state.size()) {
                         break;
                     }
 
                     const auto state_index = state.size() - state_pos - 1;
-
-                    const auto product = static_cast<std::uint64_t>(delta[delta_index]) * (multiplier & 0xFFU) +
+                    const auto product = static_cast<std::uint64_t>(delta[delta_index]) * (multiplier & 0xFF) +
                         static_cast<std::uint64_t>(state[state_index]) + carry;
 
-                    state[state_index] = static_cast<std::byte>(product & 0xFFU);
+                    state[state_index] = static_cast<std::byte>(product & 0xFF);
 
                     carry = product >> 8;
                     multiplier >>= 8;
@@ -106,7 +99,6 @@ namespace crypto {
 
             return state;
         }
-
 
         template<typename Func>
         std::vector<std::byte> ProcessBlocksParallel(
