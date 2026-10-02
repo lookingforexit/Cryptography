@@ -71,12 +71,12 @@ public:
     }
 };
 
-std::shared_ptr<const crypto::KeyExpansion> MakeKeyExpansion() {
-    return std::make_shared<TestKeyExpansion>();
+std::unique_ptr<const crypto::KeyExpansion> MakeKeyExpansion() {
+    return std::make_unique<TestKeyExpansion>();
 }
 
-std::shared_ptr<const crypto::RoundTransformation> MakeRoundTransformation() {
-    return std::make_shared<TestRoundTransformation>();
+std::unique_ptr<const crypto::RoundTransformation> MakeRoundTransformation() {
+    return std::make_unique<TestRoundTransformation>();
 }
 
 crypto::FeistelNetwork MakeFeistel(std::size_t block_size = 4) {
@@ -177,7 +177,7 @@ TEST(FeistelNetwork, RejectsInvalidInputBlockSize) {
 
 TEST(FeistelNetwork, RejectsEmptyRoundKeys) {
     crypto::FeistelNetwork feistel(
-        std::make_shared<EmptyKeyExpansion>(),
+        std::make_unique<EmptyKeyExpansion>(),
         MakeRoundTransformation(),
         4
     );
@@ -191,7 +191,7 @@ TEST(FeistelNetwork, RejectsEmptyRoundKeys) {
 TEST(FeistelNetwork, RejectsInvalidRoundTransformationSize) {
     crypto::FeistelNetwork feistel(
         MakeKeyExpansion(),
-        std::make_shared<InvalidSizeRoundTransformation>(),
+        std::make_unique<InvalidSizeRoundTransformation>(),
         4
     );
     feistel.SetKey(Bytes({0x10, 0x20, 0x30, 0x40}));
