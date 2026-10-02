@@ -118,6 +118,10 @@ namespace crypto {
                 unpadded.pop_back();
             }
 
+            if (unpadded.empty()) {
+                unpadded.push_back(std::byte{0});
+            }
+
             return unpadded;
         }
 
