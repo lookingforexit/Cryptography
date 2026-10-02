@@ -11,14 +11,18 @@ namespace crypto {
         inline constexpr std::size_t kDEALRoundKeySize = 8;
         inline constexpr std::size_t kDEALRoundCount = 6;
 
-        inline constexpr std::array<std::array<std::byte, 8>, 4> kDEALConstants{
+        inline constexpr std::array<std::array<std::byte, 8>, 6> kDEALConstants{
+        {
             {
-            {
-                    std::byte{0x80}, std::byte{0}, std::byte{0}, std::byte{0},
+                    std::byte{0x00}, std::byte{0}, std::byte{0}, std::byte{0},
                     std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0},
                 },
             {
-                    std::byte{0x40}, std::byte{0}, std::byte{0}, std::byte{0},
+                    std::byte{0x00}, std::byte{0}, std::byte{0}, std::byte{0},
+                    std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0},
+                },
+            {
+                    std::byte{0x10}, std::byte{0}, std::byte{0}, std::byte{0},
                     std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0},
                 },
             {
@@ -26,7 +30,11 @@ namespace crypto {
                     std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0},
                 },
             {
-                    std::byte{0x10}, std::byte{0}, std::byte{0}, std::byte{0},
+                    std::byte{0x40}, std::byte{0}, std::byte{0}, std::byte{0},
+                    std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0},
+                },
+            {
+                    std::byte{0x80}, std::byte{0}, std::byte{0}, std::byte{0},
                     std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0},
                 },
             }
@@ -81,25 +89,22 @@ namespace crypto {
             std::vector<std::vector<std::byte>> GenerateRoundKeys(std::span<const std::byte> input_key) const override {
                 ValidateDEALKey(input_key);
 
-                std::vector k0(input_key.begin(), input_key.begin() + (kDEALBlockSize >> 1));
-                std::vector k1(input_key.begin() + (kDEALBlockSize >> 1), input_key.end());
+                const std::vector k0(input_key.begin(), input_key.begin() + (kDEALBlockSize >> 1));
+                const std::vector k1(input_key.begin() + (kDEALBlockSize >> 1), input_key.end());
 
                 std::vector<std::vector<std::byte>> round_keys;
                 round_keys.reserve(kDEALRoundCount);
 
-                const auto r0 = DESEncrypt(kDEALScheduleKey, k0);
-                const auto r1 = DESEncrypt(kDEALScheduleKey, XORBlocks(k1, r0));
-                const auto r2 = DESEncrypt(kDEALScheduleKey, XORBlocks(XORBlocks(k0, kDEALConstants[0]), r1));
-                const auto r3 = DESEncrypt(kDEALScheduleKey, XORBlocks(XORBlocks(k1, kDEALConstants[1]), r2));
-                const auto r4 = DESEncrypt(kDEALScheduleKey, XORBlocks(XORBlocks(k0, kDEALConstants[2]), r3));
-                const auto r5 = DESEncrypt(kDEALScheduleKey, XORBlocks(XORBlocks(k1, kDEALConstants[3]), r4));
-
-                round_keys.push_back(r0);
-                round_keys.push_back(r1);
-                round_keys.push_back(r2);
-                round_keys.push_back(r3);
-                round_keys.push_back(r4);
-                round_keys.push_back(r5);
+                round_keys.push_back(DESEncrypt(kDEALScheduleKey, k0));
+                for (std::size_t round = 1; round < kDEALRoundCount; ++round) {
+                    const auto key = round & 1 ? k1 : k0;
+                    const auto round_key = DESEncrypt(kDEALScheduleKey,
+                        XORBlocks(key,
+                            XORBlocks(kDEALConstants[round], round_keys[round - 1])
+                        )
+                    );
+                    round_keys.push_back(round_key);
+                }
 
                 return round_keys;
             }
@@ -179,6 +184,6 @@ namespace crypto {
     }
 
     std::size_t DEAL::BlockSize() const {
-        return deal_impl_->BlockSize();
+        return DEALImpl::BlockSize();
     }
 }
