@@ -9,8 +9,8 @@ export namespace crypto {
         ~FeistelNetwork() override;
 
         FeistelNetwork(
-            std::shared_ptr<const KeyExpansion> key_expansion,
-            std::shared_ptr<const RoundTransformation> round_transformation,
+            std::unique_ptr<const KeyExpansion> key_expansion,
+            std::unique_ptr<const RoundTransformation> round_transformation,
             std::size_t block_size
         );
 

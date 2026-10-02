@@ -133,8 +133,8 @@ namespace crypto {
     class DEAL::DEALImpl {
     public:
         DEALImpl() : feistel_network_(
-            std::make_shared<DEALKeyExpansion>(),
-            std::make_shared<DEALRoundTransformation>(),
+            std::make_unique<DEALKeyExpansion>(),
+            std::make_unique<DEALRoundTransformation>(),
             kDEALBlockSize
         ) {}
 

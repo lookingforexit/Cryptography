@@ -44,8 +44,8 @@ namespace crypto {
     class FeistelNetwork::FeistelNetworkImpl {
     public:
         FeistelNetworkImpl(
-            std::shared_ptr<const KeyExpansion> key_expansion,
-            std::shared_ptr<const RoundTransformation> round_transformation,
+            std::unique_ptr<const KeyExpansion> key_expansion,
+            std::unique_ptr<const RoundTransformation> round_transformation,
             std::size_t block_size
         ) :
         key_expansion_(std::move(key_expansion)),
@@ -128,8 +128,8 @@ namespace crypto {
     FeistelNetwork::~FeistelNetwork() = default;
 
     FeistelNetwork::FeistelNetwork(
-        std::shared_ptr<const KeyExpansion> key_expansion,
-        std::shared_ptr<const RoundTransformation> round_transformation,
+        std::unique_ptr<const KeyExpansion> key_expansion,
+        std::unique_ptr<const RoundTransformation> round_transformation,
         std::size_t block_size
     ) : feistel_network_impl_(std::make_unique<FeistelNetworkImpl>(
         std::move(key_expansion),

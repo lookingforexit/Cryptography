@@ -258,8 +258,8 @@ namespace crypto {
     class DES::DESImpl {
     public:
         DESImpl() : feistel_network_(
-            std::make_shared<DESKeyExpansion>(),
-            std::make_shared<DESRoundTransformation>(),
+            std::make_unique<DESKeyExpansion>(),
+            std::make_unique<DESRoundTransformation>(),
             kDESBlockSize
         ){}
 
