@@ -19,9 +19,4 @@ set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
 include(CTest)
 
-add_subdirectory(src)
-add_subdirectory(apps)
-
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
+add_subdirectory(Lab1)

@@ -4,7 +4,7 @@ else()
         message(FATAL_ERROR "GoogleTest sources were not found. Install the googletest package or provide a project-local GoogleTest source.")
 endif()
 
-add_executable(cryptography_tests
+add_executable(tests1
         bits_tests.cpp
         context_tests.cpp
         des_tests.cpp
@@ -14,21 +14,21 @@ add_executable(cryptography_tests
         padding_tests.cpp
 )
 
-target_compile_features(cryptography_tests
+target_compile_features(tests1
         PRIVATE
             cxx_std_23
 )
 
-set_target_properties(cryptography_tests
+set_target_properties(tests1
         PROPERTIES
             CXX_MODULE_STD ON
 )
 
-target_link_libraries(cryptography_tests
+target_link_libraries(tests1
         PRIVATE
-            cryptography_lib
+        lib1
             GTest::gtest_main
 )
 
 include(GoogleTest)
-gtest_discover_tests(cryptography_tests)
+gtest_discover_tests(tests1)

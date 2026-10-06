@@ -203,10 +203,10 @@ int main() {
         }
     }
 
-    const std::filesystem::path temp_file("assets/temp.txt");
-    const std::filesystem::path file1("assets/text.txt");
-    //const std::filesystem::path file2("assets/song.mp3");
-    //const std::filesystem::path file3("assets/homyak.jpeg");
+    const std::filesystem::path temp_file("Lab1/assets/temp.txt");
+    const std::filesystem::path file1("Lab1/assets/text.txt");
+    //const std::filesystem::path file2("Lab1/assets/song.mp3");
+    //const std::filesystem::path file3("Lab1/assets/homyak.jpeg");
 
     for (const auto& padding_mode : padding_modes) {
         DESDemo(padding_mode, crypto::CipherMode::ECB, key8, {}, file1, temp_file);
