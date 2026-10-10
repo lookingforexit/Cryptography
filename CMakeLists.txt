@@ -20,3 +20,4 @@ set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 include(CTest)
 
 add_subdirectory(Lab1)
+add_subdirectory(Lab2)
