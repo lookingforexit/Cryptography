@@ -14,8 +14,10 @@ target_sources(lib2
         PUBLIC
             FILE_SET CXX_MODULES FILES
                 crypto.number_theory.cppm
+                crypto.primality_tests.cppm
         PRIVATE
             crypto.number_theory.cpp
+            crypto.primality_tests.cpp
 )
 
 target_link_libraries(lib2
