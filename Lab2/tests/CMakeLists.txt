@@ -9,6 +9,7 @@ endif()
 add_executable(tests2
         number_theory_tests.cpp
         primality_tests.cpp
+        rsa_tests.cpp
 )
 
 target_compile_features(tests2
