@@ -71,8 +71,8 @@ namespace crypto {
     }
 
     std::int8_t NumberTheoryService::JacobiSymbol(BigInt number, BigInt odd_positive) {
-        if (odd_positive <= 0 || (odd_positive & 1) == 0) {
-            throw std::invalid_argument("algorithm uses odd positive number");
+        if (odd_positive <= 1 || (odd_positive & 1) == 0) {
+            throw std::invalid_argument("algorithm uses odd positive number greater than 1");
         }
 
         number %= odd_positive;

@@ -170,8 +170,8 @@ TEST(JacobiSymbol, ReturnsZeroWhenArgumentsAreNotCoprime) {
 }
 
 TEST(JacobiSymbol, UsesOneAsTheUnitDenominator) {
-    EXPECT_EQ(NumberTheoryService::JacobiSymbol(0, 1), 1);
-    EXPECT_EQ(NumberTheoryService::JacobiSymbol(123, 1), 1);
+    EXPECT_THROW(NumberTheoryService::JacobiSymbol(0, 1), std::invalid_argument);
+    EXPECT_THROW(NumberTheoryService::JacobiSymbol(123, 1), std::invalid_argument);
 }
 
 TEST(JacobiSymbol, IsMultiplicativeInTheNumerator) {
