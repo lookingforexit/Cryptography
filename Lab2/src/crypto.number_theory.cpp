@@ -52,7 +52,7 @@ namespace crypto {
     }
 
     std::int8_t NumberTheoryService::LegendreSymbol(const BigInt &number, const BigInt &odd_prime) {
-        if (odd_prime <= 2) {
+        if (odd_prime <= 2 || (odd_prime & 1) == 0) {
             throw std::invalid_argument("algorithm uses odd prime number");
         }
 
