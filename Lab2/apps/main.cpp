@@ -4,6 +4,7 @@
 import std;
 import crypto.number_theory;
 import crypto.rsa;
+import crypto.wiener;
 
 int main() {
     std::println("Legendre symbol for 52 and 13 equals to: {} (expected 0)",
@@ -88,6 +89,50 @@ int main() {
     encrypted = rsa3.Encrypt(msg, public_key3);
     decrypted = rsa3.Decrypt(encrypted, private_key3);
     std::println("msg: {} = decrypted: {}", msg.str(), decrypted.str());
+
+    crypto::WienerKeyGen bad_key_gen1(crypto::RSAService::ProbabilisticPrimalityTest::FermatPrimalityTest, 0.9, kKeySize >> 1);
+    crypto::WienerKeyGen bad_key_gen2(crypto::RSAService::ProbabilisticPrimalityTest::SolovayStrassenPrimalityTest, 0.9, kKeySize >> 1);
+    crypto::WienerKeyGen bad_key_gen3(crypto::RSAService::ProbabilisticPrimalityTest::MillerRabinPrimalityTest, 0.9, kKeySize >> 1);
+
+    const auto [bad_public_key1, bad_private_key1] = bad_key_gen1.GenerateKeys();
+    const auto [bad_public_key2, bad_private_key2] = bad_key_gen2.GenerateKeys();
+    const auto [bad_public_key3, bad_private_key3] = bad_key_gen3.GenerateKeys();
+
+    std::println("public_key1 (n, e): {} {}, private_key1 (n, d): {} {}",
+        bad_public_key1.n.str(),
+        bad_public_key1.e.str(),
+        bad_private_key1.n.str(),
+        bad_private_key1.d.str()
+    );
+    const auto attack_result1 = crypto::WienerAttackService::Attack(bad_public_key1);
+    std::println("after Wiener's attack got (phi, d): {} {}",
+        attack_result1.phi.value().str(),
+        attack_result1.d.value().str()
+    );
+
+    std::println("public_key2 (n, e): {} {}, private_key2 (n, d): {} {}",
+        bad_public_key2.n.str(),
+        bad_public_key2.e.str(),
+        bad_private_key2.n.str(),
+        bad_private_key2.d.str()
+    );
+    const auto attack_result2 = crypto::WienerAttackService::Attack(bad_public_key2);
+    std::println("after Wiener's attack got (phi, d): {} {}",
+        attack_result2.phi.value().str(),
+        attack_result2.d.value().str()
+    );
+
+    std::println("public_key3 (n, e): {} {}, private_key3 (n, d): {} {}",
+        bad_public_key3.n.str(),
+        bad_public_key3.e.str(),
+        bad_private_key3.n.str(),
+        bad_private_key3.d.str()
+    );
+    const auto attack_result3 = crypto::WienerAttackService::Attack(bad_public_key3);
+    std::println("after Wiener's attack got (phi, d): {} {}",
+        attack_result3.phi.value().str(),
+        attack_result3.d.value().str()
+    );
 
     return 0;
 }
