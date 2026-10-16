@@ -52,7 +52,7 @@ TEST(RSAService, RejectsCiphertextOutsideModulusRange) {
 
 TEST(RSAService, RejectsInvalidKeys) {
     const RSA::PublicKey invalid_public_key{.n = 1, .e = 65537};
-    const RSA::PublicKey unsupported_public_exponent{.n = 55, .e = 17};
+    const RSA::PublicKey unsupported_public_exponent{.n = 55, .e = 1};
     const RSA::PrivateKey invalid_private_key{.n = 1, .d = 3};
 
     EXPECT_THROW(RSA::Encrypt(2, invalid_public_key), std::invalid_argument);

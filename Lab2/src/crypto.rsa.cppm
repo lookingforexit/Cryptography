@@ -44,7 +44,7 @@ export namespace  crypto {
             BigInt GenerateOdd();
 
             [[nodiscard]]
-            BigInt GenerateProbabilisticPrime();
+            BigInt GenerateProbablePrime();
 
         private:
             ProbabilisticPrimalityTest test_type_;

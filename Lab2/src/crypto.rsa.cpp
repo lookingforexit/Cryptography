@@ -34,7 +34,7 @@ namespace crypto {
         return result;
     }
 
-    BigInt RSAService::RSAKeyGen::GenerateProbabilisticPrime() {
+    BigInt RSAService::RSAKeyGen::GenerateProbablePrime() {
         while (true) {
             if (const auto odd = GenerateOdd(); test_->Test(odd, min_probability_)) {
                 return odd;
@@ -75,21 +75,21 @@ namespace crypto {
             BigInt q{0};
 
             while (true) {
-                p = GenerateProbabilisticPrime();
+                p = GenerateProbablePrime();
                 if (NumberTheoryService::GCDBinaryEuclid(e, p - 1) == 1) {
                     break;
                 }
             }
 
             while (true) {
-                q = GenerateProbabilisticPrime();
+                q = GenerateProbablePrime();
                 if (NumberTheoryService::GCDBinaryEuclid(e, q - 1) == 1) {
                     break;
                 }
             }
 
             // Fermat's attack
-            if (boost::multiprecision::abs(p - q) <= 1 << ((bit_length_ >> 1) - 100)) {
+            if (boost::multiprecision::abs(p - q) <= BigInt{1} << (3 * (bit_length_ >> 2))) {
                 continue;
             }
 
@@ -123,7 +123,7 @@ namespace crypto {
 
     BigInt RSAService::Encrypt(const BigInt &plaintext, const PublicKey &public_key) {
         // c = p^e mod n
-        if (public_key.e != 65537 || public_key.n <= 1) {
+        if (public_key.e <= 1 || public_key.n <= 1) {
             throw std::invalid_argument("invalid public key");
         }
         if (plaintext < 0 || plaintext >= public_key.n) {
