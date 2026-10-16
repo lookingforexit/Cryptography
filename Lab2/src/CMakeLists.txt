@@ -16,10 +16,12 @@ target_sources(lib2
                 crypto.number_theory.cppm
                 crypto.primality_tests.cppm
                 crypto.rsa.cppm
+                crypto.wiener.cppm
         PRIVATE
             crypto.number_theory.cpp
             crypto.primality_tests.cpp
             crypto.rsa.cpp
+            crypto.wiener.cpp
 )
 
 target_link_libraries(lib2
